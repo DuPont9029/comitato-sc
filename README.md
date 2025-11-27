@@ -17,9 +17,9 @@ C.O.V.D.E.V è un’app Next.js + Solidity per gestire e visualizzare le votazio
   <img alt="Top Language" src="https://img.shields.io/github/languages/top/DuPont9029/comitato-sc">
 </p>
 
-<p align="center">
-  <a href="https://starchart.cc/DuPont9029/comitato-sc"><img alt="Star History" src="https://starchart.cc/DuPont9029/comitato-sc.svg" /></a>
-</p>
+
+ [![Stargazers over time](https://starchart.cc/DuPont9029/C.O.V.D.E.V.svg?variant=adaptive)](https://starchart.cc/DuPont9029/C.O.V.D.E.V)
+
 
 ## 🚀 Caratteristiche
 - Emiciclo dinamico: riempimento dei seggi in base ai voti, simmetrico dal centro verso l’esterno.
