@@ -574,7 +574,7 @@ function RepresentativePanelInner({ contract, account, isRep }: { contract: Cont
             {repActive === 'vote' && repProposalId && (
               <>
                 <button disabled={disabled} onClick={() => send(function(this: any){ return this.voteOnRepresentativeProposal(Number(repProposalId), true); })} className="rounded-md bg-indigo-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-indigo-600">Vota favore</button>
-                <button disabled={disabled} onClick={() => send(function(this: any){ return this.voteOnRepresentativeProposal(Number(repProposalId), false); })} className="rounded-md bg-rose-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-rose-600">Vota contro</button>
+                <button disabled={disabled} onClick={() => send(function(this: any){ return this.voteOnRepresentativeProposal(Number(repProposalId), false); })} className="rounded-md bg-yellow-500 text-black px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-yellow-600">Vota contro</button>
               </>
             )}
           </div>
@@ -886,14 +886,14 @@ function StudentProposalRow({ id, contract, disabled, onVotePro, onVoteContra }:
         <button
           disabled={disabled}
           onClick={onVotePro}
-          className="rounded-md bg-green-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-green-600"
+          className="rounded-md bg-indigo-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-indigo-600"
         >
           Vota Pro
         </button>
         <button
           disabled={disabled}
           onClick={onVoteContra}
-          className="rounded-md bg-red-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-red-600"
+          className="rounded-md bg-yellow-500 text-black px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-yellow-600"
         >
           Vota Contro
         </button>
