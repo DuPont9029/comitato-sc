@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* UI component primitives */
+.ui-panel { @apply rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 space-y-4; }
+.ui-section-title { @apply text-sm font-medium text-zinc-300; }
+.ui-label { @apply text-xs text-zinc-400; }
+.ui-input { @apply w-full rounded-lg border border-zinc-700 bg-zinc-950 text-zinc-200 placeholder-zinc-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500; }
+.ui-input-warning { @apply focus:ring-yellow-500/40 focus:border-yellow-500; }
+.ui-button { @apply rounded-lg bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed; }
+.ui-button-secondary { @apply rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100 hover:bg-zinc-700; }
+.ui-button-danger { @apply rounded-lg bg-rose-500 px-3 py-2 text-sm text-white hover:bg-rose-600; }
+.ui-button-success { @apply rounded-lg bg-emerald-500 px-3 py-2 text-sm text-white hover:bg-emerald-600; }
+.ui-group { @apply grid grid-cols-1 md:grid-cols-2 gap-4; }
+.ui-actions { @apply flex flex-wrap items-center gap-3; }
+.ui-badge { @apply inline-flex items-center rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300; }
+.ui-alert-danger { @apply text-rose-400 text-xs; }
+.ui-alert-success { @apply text-emerald-400 text-xs; }

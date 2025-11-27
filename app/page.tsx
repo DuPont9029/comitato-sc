@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserProvider, Contract, decodeBytes32String } from "ethers";
+import * as ethers from "ethers";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/contract";
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
   const [hasVotingRight, setHasVotingRight] = useState<boolean>(false);
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
+  const [copied, setCopied] = useState<boolean>(false);
 
   const contract = useMemo(() => {
     if (!provider) return null;
@@ -52,6 +54,29 @@ export default function Home() {
     }
   }, []);
 
+  const disconnect = useCallback(() => {
+    // Nota: MetaMask non espone un vero "disconnect"; puliamo lo stato locale
+    setAccount(null);
+    setProvider(null);
+    setChainId(null);
+    setIsRep(false);
+    setHasVotingRight(false);
+    setHasVoted(false);
+    setStatus("");
+  }, []);
+
+  const copyAddress = useCallback(async () => {
+    if (!account) return;
+    try {
+      await navigator.clipboard.writeText(account);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch (e: any) {
+      console.error(e);
+      setStatus("Impossibile copiare l'indirizzo");
+    }
+  }, [account]);
+
   useEffect(() => {
     if ((window as any).ethereum) {
       (window as any).ethereum.on("accountsChanged", (accs: string[]) => {
@@ -70,14 +95,26 @@ export default function Home() {
   const isMainnet = chainId === "0x1";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-black dark:to-zinc-900 text-zinc-900 dark:text-zinc-100">
+    <div className="min-h-screen bg-linear-to-b from-zinc-50 to-white dark:from-black dark:to-zinc-900 text-zinc-900 dark:text-zinc-100">
       <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
         <h1 className="text-xl font-semibold">Comitato Studentesco — Votazioni</h1>
         <div className="flex items-center gap-3">
           {account ? (
-            <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1 text-sm">
-              {account.slice(0, 6)}…{account.slice(-4)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-800 pl-2 pr-3 py-1 text-sm">
+                <AddressAvatar address={account} size={18} />
+                <button onClick={copyAddress} className="font-mono hover:underline" title={copied ? "Copiato!" : "Copia"}>
+                  {account.slice(0, 6)}…{account.slice(-4)}
+                </button>
+              </span>
+              <button
+                onClick={disconnect}
+                className="rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 px-2 py-1 text-xs hover:bg-zinc-300 dark:hover:bg-zinc-600"
+              >
+                Disconnetti
+              </button>
+              {copied && <span className="ui-badge">Copiato</span>}
+            </div>
           ) : (
             <button
               onClick={connect}
@@ -111,16 +148,25 @@ export default function Home() {
             {status && (
               <p className="mt-2 text-xs text-red-600">{status}</p>
             )}
-            <div className="mt-4">
+            <div className="mt-4 flex gap-2 flex-wrap items-center">
               <button
                 onClick={refreshRole}
                 className="rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-1 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
                 Aggiorna Stato
               </button>
+              {account && (
+                <button
+                  onClick={disconnect}
+                  className="rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 px-3 py-1 text-sm hover:bg-zinc-300 dark:hover:bg-zinc-600"
+                >
+                  Disconnetti
+                </button>
+              )}
             </div>
           </div>
 
+          <ContractFunds contract={contract} />
           <ActiveProposals contract={contract} />
         </section>
 
@@ -131,7 +177,7 @@ export default function Home() {
       </main>
 
       <footer className="max-w-6xl mx-auto px-6 py-8 text-xs text-zinc-500">
-        Contratto: {CONTRACT_ADDRESS}
+        Contratto: <a href="https://etherscan.io/address/0x88f2d5c26395dedbf978079e5142caf548688e72" target="_blank" rel="noopener noreferrer" className="underline">{CONTRACT_ADDRESS}</a>
       </footer>
     </div>
   );
@@ -186,7 +232,8 @@ function ActiveProposals({ contract }: { contract: Contract | null }) {
 
 function ProposalRow({ id, contract }: { id: number; contract: Contract | null }) {
   const [name, setName] = useState<string>("");
-  const [count, setCount] = useState<number>(0);
+  const [votesPro, setVotesPro] = useState<number>(0);
+  const [votesContra, setVotesContra] = useState<number>(0);
   const [active, setActive] = useState<boolean>(false);
 
   const load = useCallback(async () => {
@@ -195,7 +242,8 @@ function ProposalRow({ id, contract }: { id: number; contract: Contract | null }
       const p = await contract.proposals(id);
       const n = p.name ? decodeBytes32String(p.name) : "";
       setName(n);
-      setCount(Number(p.voteCount));
+      setVotesPro(Number((p as any).votesPro ?? 0));
+      setVotesContra(Number((p as any).votesContra ?? 0));
       setActive(Boolean(p.active));
     } catch (e) {
       setName("—");
@@ -210,7 +258,7 @@ function ProposalRow({ id, contract }: { id: number; contract: Contract | null }
     <li className="flex items-center justify-between rounded-lg border border-zinc-200 dark:border-zinc-800 p-3">
       <div>
         <p className="text-sm font-medium">#{id} {name || "(senza nome)"}</p>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">Voti: {count} • Attiva: {active ? "Sì" : "No"}</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">Pro: {votesPro} • Contra: {votesContra} • Attiva: {active ? "Sì" : "No"}</p>
       </div>
     </li>
   );
@@ -221,6 +269,8 @@ function HemicyclePanel({ contract, ids }: { contract: Contract | null; ids: num
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [nameMap, setNameMap] = useState<Record<number, string>>({});
   const [voteCount, setVoteCount] = useState<number>(0);
+  const [votesProSel, setVotesProSel] = useState<number>(0);
+  const [votesContraSel, setVotesContraSel] = useState<number>(0);
   const [selectedName, setSelectedName] = useState<string>("");
   const [mounted, setMounted] = useState(false);
 
@@ -256,7 +306,11 @@ function HemicyclePanel({ contract, ids }: { contract: Contract | null; ids: num
         const n = p?.name ? decodeBytes32String(p.name) : "";
         if (!cancelled) {
           setSelectedName(n);
-          setVoteCount(Number(p.voteCount) || 0);
+          const vp = Number((p as any).votesPro ?? 0);
+          const vc = Number((p as any).votesContra ?? 0);
+          setVotesProSel(vp);
+          setVotesContraSel(vc);
+          setVoteCount(vp + vc);
         }
       } catch {}
     }
@@ -306,7 +360,7 @@ function HemicyclePanel({ contract, ids }: { contract: Contract | null; ids: num
     return (
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-900/60">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Emiciclo</p>
+          <p className="text-sm font-medium">Voti</p>
           <div className="h-6 w-24 rounded bg-zinc-800" />
         </div>
         <div className="mt-3 h-28 rounded bg-white dark:bg-zinc-900/40" />
@@ -317,9 +371,9 @@ function HemicyclePanel({ contract, ids }: { contract: Contract | null; ids: num
   return (
     <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-900/60">
       <div className="flex items-center justify-between gap-2 overflow-hidden">
-        <p className="text-sm font-medium flex-shrink-0">Emiciclo</p>
+        <p className="text-sm font-medium shrink-0">Voti</p>
         <div className="flex items-center gap-2 min-w-0">
-          <label className="text-xs text-zinc-400 flex-shrink-0">Proposta</label>
+          <label className="text-xs text-zinc-400 shrink-0">Proposta</label>
           <select
             value={selectedId ?? ""}
             onChange={(e) => {
@@ -341,7 +395,7 @@ function HemicyclePanel({ contract, ids }: { contract: Contract | null; ids: num
 
       <div className="mt-4 flex items-center justify-center">
         <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}>
-          {/* Sedute emiciclo: default tutte visibili grigie, altrimenti solo N sedute */}
+          {/* Sedute emiciclo: default tutte visibili grigie, altrimenti colorazione pro/contra */}
           {showDefault
             ? seats.map((p, i) => (
                 <circle
@@ -353,38 +407,32 @@ function HemicyclePanel({ contract, ids }: { contract: Contract | null; ids: num
                   className="text-zinc-700"
                 />
               ))
-            : seatsOrdered.slice(0, filledSeats).map((p, i) => (
-                <circle
-                  key={i}
-                  cx={p.x}
-                  cy={p.y}
-                  r={seatR}
-                  fill="currentColor"
-                  className="text-indigo-500"
-                />
-              ))}
+            : seatsOrdered.map((p, i) => {
+                const proLimit = votesProSel;
+                const contraLimit = votesProSel + votesContraSel;
+                const cls = i < proLimit
+                  ? "text-green-500"
+                  : i < contraLimit
+                  ? "text-red-500"
+                  : "text-zinc-700";
+                return (
+                  <circle
+                    key={i}
+                    cx={p.x}
+                    cy={p.y}
+                    r={seatR}
+                    fill="currentColor"
+                    className={cls}
+                  />
+                );
+              })}
 
           {/* Centro con 4 sedute rappresentanti (solo in vista default) */}
           {showDefault && (
             <g>
               {Array.from({ length: 4 }).map((_, i) => (
-                <circle
-                  key={i}
-                  cx={cx - 11 + (i % 2) * 22}
-                  cy={cy - 38 + Math.floor(i / 2) * 22}
-                  r={seatR + 1}
-                  fill="currentColor"
-                  className="text-zinc-300"
-                />
+                <circle key={i} cx={cx + (i - 1.5) * 18} cy={cy - 25} r={seatR} fill="currentColor" className="text-zinc-500" />
               ))}
-              { /*
-              <text
-                x={cx}
-                y={cy - 10}
-                textAnchor="middle"
-                className="text-[10px] fill-zinc-400"
-              >REP</text>
-              */}
             </g>
           )}
         </svg>
@@ -394,7 +442,7 @@ function HemicyclePanel({ contract, ids }: { contract: Contract | null; ids: num
         <div className="mt-3 text-xs text-zinc-400">
           <span className="font-medium text-zinc-200">#{selectedId}</span>
           {selectedName ? ` — ${selectedName}` : ""}
-          <span className="ml-2">Voti: {voteCount}</span>
+          <span className="ml-2">Pro: {votesProSel} • Contra: {votesContraSel} (Totale: {voteCount})</span>
         </div>
       )}
     </div>
@@ -405,6 +453,10 @@ function RepresentativePanel({ contract, account, isRep }: { contract: Contract 
   if (!isRep) {
     return null;
   }
+  return <RepresentativePanelInner contract={contract} account={account} isRep={isRep} />;
+}
+
+function RepresentativePanelInner({ contract, account, isRep }: { contract: Contract | null; account: string | null; isRep: boolean; }) {
   const disabled = !contract || !account || !isRep;
   const [addrAdd, setAddrAdd] = useState("");
   const [addrRem, setAddrRem] = useState("");
@@ -416,10 +468,15 @@ function RepresentativePanel({ contract, account, isRep }: { contract: Contract 
   const [newName, setNewName] = useState("");
   const [repProposalId, setRepProposalId] = useState("");
   const [status, setStatus] = useState("");
-  // add active action trackers for dynamic forms
   const [repActive, setRepActive] = useState<string | null>(null);
   const [studentActive, setStudentActive] = useState<string | null>(null);
   const [proposalActive, setProposalActive] = useState<string | null>(null);
+
+  const [fundsStatus, setFundsStatus] = useState("");
+  const [fundsRecipient, setFundsRecipient] = useState("");
+  const [fundsAmount, setFundsAmount] = useState("");
+  const [fundsProposalId, setFundsProposalId] = useState("");
+  const [fundsActive, setFundsActive] = useState<string | null>(null);
 
   const send = useCallback(async (fn: () => Promise<any>) => {
     if (!contract) return;
@@ -435,6 +492,63 @@ function RepresentativePanel({ contract, account, isRep }: { contract: Contract 
       setStatus(`❌ Errore: ${e?.shortMessage ?? e?.message ?? "transazione"}`);
     }
   }, [contract]);
+
+  const proposeFundTransfer = useCallback(async () => {
+    if (!contract) return;
+    try {
+      setFundsStatus("Creo proposta trasferimento…");
+      const signer = await (contract.runner as BrowserProvider).getSigner();
+      const c = contract.connect(signer);
+      const amountWei = ethers.parseEther(fundsAmount || "0");
+      const tx = await (c as any).addFundTransferProposal(fundsRecipient, amountWei);
+      await tx.wait();
+      setFundsStatus("✅ Proposta di trasferimento creata");
+      setFundsRecipient("");
+      setFundsAmount("");
+    } catch (e: any) {
+      console.error(e);
+      setFundsStatus(`❌ Errore: ${e?.shortMessage ?? e?.message ?? "proposta trasferimento"}`);
+    }
+  }, [contract, fundsRecipient, fundsAmount]);
+
+  const actFundProposal = useCallback(async (action: "activate"|"deactivate"|"vote"|"execute") => {
+    if (!contract || !fundsProposalId) return;
+    try {
+      setFundsStatus("Processo proposta fondi…");
+      const signer = await (contract.runner as BrowserProvider).getSigner();
+      const c = contract.connect(signer);
+      const idNum = Number(fundsProposalId);
+      let tx;
+      if (action === "activate") tx = await (c as any).activateFundTransferProposal(idNum);
+      else if (action === "deactivate") tx = await (c as any).deactivateFundTransferProposal(idNum);
+      else if (action === "vote") tx = await (c as any).voteForFundTransfer(idNum);
+      else tx = await (c as any).executeFundTransfer(idNum);
+      await tx.wait();
+      setFundsStatus("✅ Operazione fondi completata");
+    } catch (e: any) {
+      console.error(e);
+      setFundsStatus(`❌ Errore: ${e?.shortMessage ?? e?.message ?? "fondi"}`);
+    }
+  }, [contract, fundsProposalId]);
+
+  const reuseFundProposal = useCallback(async () => {
+    if (!contract || !fundsProposalId) return;
+    try {
+      setFundsStatus("Riutilizzo proposta fondi…");
+      const signer = await (contract.runner as BrowserProvider).getSigner();
+      const c = contract.connect(signer);
+      const idNum = Number(fundsProposalId);
+      const amountWei = ethers.parseEther(fundsAmount || "0");
+      const tx = await (c as any).updateFundTransferProposal(idNum, fundsRecipient, amountWei);
+      await tx.wait();
+      setFundsStatus("✅ Proposta fondi riutilizzata");
+      setFundsRecipient("");
+      setFundsAmount("");
+    } catch (e: any) {
+      console.error(e);
+      setFundsStatus(`❌ Errore: ${e?.shortMessage ?? e?.message ?? "riuso proposta fondi"}`);
+    }
+  }, [contract, fundsProposalId, fundsRecipient, fundsAmount]);
 
   return (
     <div className="rounded-xl border border-zinc-800 p-6 bg-zinc-900/60 shadow-sm max-w-5xl mx-auto space-y-6">
@@ -466,6 +580,50 @@ function RepresentativePanel({ contract, account, isRep }: { contract: Contract 
           </div>
         </div>
 
+        <div className="ui-panel">
+          <p className="ui-section-title">Gestione Fondi</p>
+          {fundsStatus && <p className={fundsStatus.startsWith("❌") ? "ui-alert-danger" : "ui-alert-success"}>{fundsStatus}</p>}
+          <div className="space-y-3">
+            <input
+              value={fundsRecipient}
+              onFocus={() => setFundsActive('transfer')}
+              onChange={(e) => { const v = e.target.value; setFundsRecipient(v); if (v) setFundsActive('transfer'); }}
+              placeholder="Destinatario (address)"
+              className="ui-input ui-input-warning"
+            />
+            <input
+              value={fundsAmount}
+              onFocus={() => setFundsActive('transfer')}
+              onChange={(e) => { const v = e.target.value; setFundsAmount(v); if (v) setFundsActive('transfer'); }}
+              placeholder="Importo in ETH"
+              className="ui-input ui-input-warning"
+            />
+            <input
+              value={fundsProposalId}
+              onFocus={() => setFundsActive('manage')}
+              onChange={(e) => { const v = e.target.value; setFundsProposalId(v); if (v) setFundsActive('manage'); }}
+              placeholder="ID proposta fondi"
+              className="ui-input ui-input-warning"
+            />
+          </div>
+          <div className="pt-3 mt-1 border-t border-zinc-800 flex flex-wrap gap-2">
+            {fundsActive === 'transfer' && fundsRecipient && fundsAmount && (
+              <button disabled={disabled} onClick={proposeFundTransfer} className="ui-button">Crea proposta trasferimento</button>
+            )}
+            {fundsActive === 'manage' && fundsProposalId && (
+              <>
+                <button disabled={disabled} onClick={() => actFundProposal('activate')} className="ui-button">Attiva</button>
+                <button disabled={disabled} onClick={() => actFundProposal('deactivate')} className="ui-button-danger">Disattiva</button>
+                <button disabled={disabled} onClick={() => actFundProposal('vote')} className="ui-button">Vota</button>
+                <button disabled={disabled} onClick={() => actFundProposal('execute')} className="ui-button-success">Esegui</button>
+              </>
+            )}
+            {fundsRecipient && fundsAmount && fundsProposalId && (
+              <button disabled={disabled} onClick={reuseFundProposal} className="ui-button-success">Riutilizza proposta fondi</button>
+            )}
+          </div>
+        </div>
+
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 space-y-3">
           <p className="text-xs font-semibold tracking-wide uppercase text-zinc-400">Gestione Studenti</p>
           <div className="space-y-3">
@@ -490,8 +648,8 @@ function RepresentativePanel({ contract, account, isRep }: { contract: Contract 
           <p className="text-xs font-semibold tracking-wide uppercase text-zinc-400">Gestione Proposte</p>
           <div className="space-y-3">
             <input value={proposalName} onFocus={() => setProposalActive('add')} onChange={(e) => { const v = e.target.value; setProposalName(v); if (v) setProposalActive('add'); }} placeholder="Nome proposta (max 32 char)" className="min-w-0 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent" />
-            <input value={proposalId} onFocus={() => setProposalActive('id')} onChange={(e) => { const v = e.target.value; setProposalId(v); if (v) setProposalActive('id'); }} placeholder="ID proposta" className="min-w-0 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent" />
-            <input value={newName} onFocus={() => setProposalActive('reuse')} onChange={(e) => { const v = e.target.value; setNewName(v); if (v) setProposalActive('reuse'); }} placeholder="Nuovo nome" className="min-w-0 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent" />
+            <input value={proposalId} onFocus={() => setProposalActive('id')} onChange={(e) => { const v = e.target.value; setProposalId(v); if (v) setProposalActive('id'); }} placeholder="ID proposta" className="ui-input ui-input-warning" />
+            <input value={newName} onFocus={() => setProposalActive('reuse')} onChange={(e) => { const v = e.target.value; setNewName(v); if (v) setProposalActive('reuse'); }} placeholder="Nuovo nome" className="ui-input ui-input-warning" />
           </div>
           <div className="pt-3 mt-1 border-t border-zinc-800 flex flex-wrap gap-2">
             {proposalActive === 'add' && proposalName && (
@@ -513,11 +671,91 @@ function RepresentativePanel({ contract, account, isRep }: { contract: Contract 
   );
 }
 
+function ContractFunds({ contract }: { contract: Contract | null }) {
+  const [balanceEth, setBalanceEth] = useState<string>("0");
+  const [error, setError] = useState<string>("");
+  const [depositAmount, setDepositAmount] = useState<string>("");
+  const [status, setStatus] = useState<string>("");
+  const [eurRate, setEurRate] = useState<number | null>(null);
+
+  const refreshFiat = useCallback(async () => {
+    try {
+      const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=eur');
+      const data = await res.json();
+      const rate = data?.ethereum?.eur;
+      if (typeof rate === 'number') setEurRate(rate);
+    } catch (e) {
+      console.error('Errore recupero EUR', e);
+    }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setError("");
+    try {
+      if (!contract || !contract.runner) return;
+      const provider = contract.runner as BrowserProvider;
+      const bal = await provider.getBalance(CONTRACT_ADDRESS);
+      setBalanceEth(ethers.formatEther(bal));
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.shortMessage ?? e?.message ?? "Errore nel recupero saldo");
+    } finally {
+      await refreshFiat();
+    }
+  }, [contract, refreshFiat]);
+
+  const deposit = useCallback(async () => {
+    if (!contract) return;
+    try {
+      setStatus("Invio fondi…");
+      const signer = await (contract.runner as BrowserProvider).getSigner();
+      const tx = await signer.sendTransaction({ to: CONTRACT_ADDRESS, value: ethers.parseEther(depositAmount || "0") });
+      await tx.wait();
+      setStatus("✅ Deposito eseguito");
+      setDepositAmount("");
+      refresh();
+    } catch (e: any) {
+      console.error(e);
+      setStatus(`❌ Errore: ${e?.shortMessage ?? e?.message ?? "deposito"}`);
+    }
+  }, [contract, depositAmount, refresh]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const eurValue = eurRate != null ? Number(balanceEth || "0") * eurRate : null;
+
+  return (
+    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+      <h2 className="text-lg font-medium">Fondi del Comitato</h2>
+      
+      <p className="mt-2 text-sm">
+        Saldo: {balanceEth} ETH {eurValue != null && (
+          <span className="text-zinc-400">(~{eurValue.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })})</span>
+        )}
+      </p>
+      {error && <p className="mt-2 text-xs text-amber-600">{error}</p>}
+      {status && <p className={status.startsWith("❌") ? "ui-alert-danger" : "ui-alert-success"}>{status}</p>}
+      <div className="mt-3">
+        <input value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="Importo in ETH" className="ui-input w-full" />
+      </div>
+      {depositAmount && (
+        <div className="mt-2 flex gap-2">
+          <button onClick={deposit} className="ui-button">Deposita</button>
+          <button onClick={refresh} className="ui-button-secondary">Aggiorna</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StudentPanel({ contract, account, hasVotingRight }: { contract: Contract | null; account: string | null; hasVotingRight: boolean; }) {
   if (!account) {
     return null;
   }
+  return <StudentPanelInner contract={contract} account={account} hasVotingRight={hasVotingRight} />;
+}
 
+function StudentPanelInner({ contract, account, hasVotingRight }: { contract: Contract | null; account: string | null; hasVotingRight: boolean; }) {
   const disabled = !contract || !account;
   const [proposalIdStudent, setProposalIdStudent] = useState("");
 
@@ -526,39 +764,177 @@ function StudentPanel({ contract, account, hasVotingRight }: { contract: Contrac
     try {
       const signer = await (contract.runner as BrowserProvider).getSigner();
       const c = contract.connect(signer);
-      const tx = await (c as any).vote(Number(proposalIdStudent));
+      const tx = await (c as any).votePro(Number(proposalIdStudent));
       await tx.wait();
     } catch (e: any) {
       console.error(e);
     }
   }, [contract, proposalIdStudent]);
 
+  const [ids, setIds] = useState<number[]>([]);
+  const [error, setError] = useState<string>("");
+
+  const load = useCallback(async () => {
+    setError("");
+    if (!contract) return;
+    try {
+      const result = await contract.getActiveProposalIds();
+      setIds(result.map((n: any) => Number(n)));
+    } catch (e: any) {
+      setError("Impossibile caricare l'elenco delle proposte attive.");
+    }
+  }, [contract]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const votePro = useCallback(async (id: number) => {
+    if (!contract) return;
+    try {
+      const signer = await (contract.runner as BrowserProvider).getSigner();
+      const c = contract.connect(signer);
+      const tx = await (c as any).votePro(id);
+      await tx.wait();
+      load();
+    } catch (e: any) {
+      console.error(e);
+    }
+  }, [contract, load]);
+
+  const voteContra = useCallback(async (id: number) => {
+    if (!contract) return;
+    try {
+      const signer = await (contract.runner as BrowserProvider).getSigner();
+      const c = contract.connect(signer);
+      const tx = await (c as any).voteContra(id);
+      await tx.wait();
+      load();
+    } catch (e: any) {
+      console.error(e);
+    }
+  }, [contract, load]);
+
   return (
     <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 bg-white dark:bg-zinc-900/60 shadow-sm max-w-5xl mx-auto space-y-4">
       <h2 className="text-lg font-semibold tracking-tight">Area Studenti</h2>
       <div className="grid grid-cols-1 gap-4">
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-4">
-          <div className="grid grid-cols-12 gap-5 items-end">
-            <div className="col-span-12 md:col-span-9">
-              <input
-                value={proposalIdStudent}
-                onChange={(e) => setProposalIdStudent(e.target.value)}
-                placeholder="ID proposta"
-                className="min-w-0 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-              />
-            </div>
-            <div className="col-span-12 md:col-span-3 md:pl-4 flex gap-2 md:justify-end">
-              <button
-                disabled={disabled || !hasVotingRight}
-                onClick={vote}
-                className="rounded-md bg-indigo-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-indigo-600"
-              >
-                Vota
-              </button>
-            </div>
+          <div>
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">Seleziona una proposta attiva per votare.</p>
+            {error && (<p className="mt-2 text-xs text-amber-600">{error}</p>)}
+            {!ids.length ? (
+              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Nessuna proposta attiva trovata.</p>
+            ) : (
+              <ul className="mt-3 max-h-64 overflow-y-auto space-y-2">
+                {ids.map((id) => (
+                  <StudentProposalRow
+                    key={id}
+                    id={id}
+                    contract={contract}
+                    disabled={disabled || !hasVotingRight}
+                    onVotePro={() => votePro(id)}
+                    onVoteContra={() => voteContra(id)}
+                  />
+                ))}
+              </ul>
+            )}
+            <button
+              onClick={load}
+              className="mt-3 rounded-md border border-zinc-300 dark:border-zinc-700 px-2.5 py-1.5 text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            >
+              Aggiorna elenco
+            </button>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function StudentProposalRow({ id, contract, disabled, onVotePro, onVoteContra }: { id: number; contract: Contract | null; disabled: boolean; onVotePro: () => void; onVoteContra: () => void; }) {
+  const [name, setName] = useState<string>("");
+  const [votesPro, setVotesPro] = useState<number>(0);
+  const [votesContra, setVotesContra] = useState<number>(0);
+  const [active, setActive] = useState<boolean>(false);
+
+  const load = useCallback(async () => {
+    if (!contract) return;
+    try {
+      const p = await contract.proposals(id);
+      const n = p.name ? decodeBytes32String(p.name) : "";
+      setName(n);
+      setVotesPro(Number((p as any).votesPro ?? 0));
+      setVotesContra(Number((p as any).votesContra ?? 0));
+      setActive(Boolean(p.active));
+    } catch (e) {
+      setName("—");
+    }
+  }, [contract, id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return (
+    <li className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-3">
+      <div>
+        <p className="text-sm font-medium break-words">#{id} {name || "(senza nome)"}</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">Pro: {votesPro} • Contra: {votesContra} • Attiva: {active ? "Sì" : "No"}</p>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <button
+          disabled={disabled}
+          onClick={onVotePro}
+          className="rounded-md bg-green-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-green-600"
+        >
+          Vota Pro
+        </button>
+        <button
+          disabled={disabled}
+          onClick={onVoteContra}
+          className="rounded-md bg-red-500 text-white px-2.5 py-1.5 text-xs disabled:opacity-50 transition-colors hover:bg-red-600"
+        >
+          Vota Contro
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function AddressAvatar({ address, size = 24 }: { address: string; size?: number }) {
+  // Generazione semplice di identicon SVG basato sull'indirizzo (seeded)
+  const seed = Array.from(address.toLowerCase()).reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  function rnd(i: number) {
+    let x = (seed + i * 9973) % 2147483647;
+    x = (x * 48271) % 2147483647;
+    return x / 2147483647;
+  }
+  const hue = Math.floor(rnd(1) * 360);
+  const fg = `hsl(${hue}, 70%, 50%)`;
+  const bg = `hsl(${(hue + 180) % 360}, 40%, 92%)`;
+  const cells: boolean[] = [];
+  for (let y = 0; y < 5; y++) {
+    const row: boolean[] = [];
+    for (let x = 0; x < 3; x++) {
+      row.push(rnd(y * 5 + x) > 0.5);
+    }
+    // Specchia per ottenere 5 colonne
+    cells.push(...row, row[1], row[0]);
+  }
+  const cellSize = size / 5;
+  const rects = [] as any[];
+  for (let y = 0; y < 5; y++) {
+    for (let x = 0; x < 5; x++) {
+      const idx = y * 5 + x;
+      rects.push({ x: x * cellSize, y: y * cellSize, on: cells[idx] });
+    }
+  }
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: '50%', background: bg }}>
+      {rects.map((r, i) => (
+        <rect key={i} x={r.x} y={r.y} width={cellSize} height={cellSize} fill={r.on ? fg : 'transparent'} />
+      ))}
+    </svg>
   );
 }
