@@ -5,6 +5,7 @@ import { BrowserProvider, Contract, decodeBytes32String } from "ethers";
 import * as ethers from "ethers";
 import { MetaMaskSDK } from "@metamask/sdk";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "../lib/contract";
+import SnakeGame from './SnakeGame';
 
 export default function Home() {
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
@@ -304,8 +305,9 @@ function FundTransferPanel({
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         Seleziona una proposta di trasferimento fondi attiva e approvala.
       </p>
+      { /* fundTransferProposals.length = 1 */}
       {fundTransferProposals.length > 0 ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-3 overflow-y-auto max-h-60">
           <select
             value={selectedProposalId}
             onChange={(e) => setSelectedProposalId(e.target.value)}
@@ -330,9 +332,7 @@ function FundTransferPanel({
           </button>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-          Nessuna proposta di trasferimento fondi attiva.
-        </p>
+         <SnakeGame /> 
       )}
       {status && <p className="mt-3 text-xs text-red-600">{status}</p>}
     </div>
@@ -370,11 +370,11 @@ function ActiveProposals({ contract }: { contract: Contract | null }) {
             Nessuna proposta caricata.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
+          <div className="mt-3 space-y-2 overflow-y-auto max-h-60">
             {ids.map((id) => (
               <ProposalRow key={id} id={id} contract={contract} />
             ))}
-          </ul>
+          </div>
         )}
         <button
           onClick={load}
@@ -1479,7 +1479,7 @@ function StudentProposalRow({
   return (
     <li className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-3">
       <div>
-        <p className="text-sm font-medium break-words">
+        <p className="text-sm font-medium wrap-break-words">
           #{id} {name || "(senza nome)"}
         </p>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">
