@@ -20,7 +20,7 @@ export default function Home() {
   useEffect(() => {
     setIsMobile(
       typeof navigator !== "undefined" &&
-        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
     );
   }, []);
 
@@ -280,7 +280,7 @@ function FundTransferPanel({
     try {
       const signer = await (contract.runner as any).provider.getSigner(account);
       const contractWithSigner = contract.connect(signer);
-      const tx = await contractWithSigner.executeFundTransfer(
+      const tx = await (contractWithSigner as any).executeFundTransfer(
         selectedProposalId
       );
       await tx.wait();
@@ -465,7 +465,7 @@ function HemicyclePanel({
           const p = await contract.proposals(id);
           const n = p?.name ? decodeBytes32String(p.name) : "";
           entries.push([id, n]);
-        } catch {}
+        } catch { }
       }
       if (!cancelled) {
         setNameMap((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
@@ -493,7 +493,7 @@ function HemicyclePanel({
           setVotesContraSel(vc);
           setVoteCount(vp + vc);
         }
-      } catch {}
+      } catch { }
     }
     fetchSelected();
     return () => {
@@ -585,35 +585,35 @@ function HemicyclePanel({
           {/* Sedute emiciclo: default tutte visibili grigie, altrimenti colorazione pro/contra */}
           {showDefault
             ? seats.map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x}
+                cy={p.y}
+                r={seatR}
+                fill="currentColor"
+                className="text-zinc-700"
+              />
+            ))
+            : seatsOrdered.map((p, i) => {
+              const proLimit = votesProSel;
+              const contraLimit = votesProSel + votesContraSel;
+              const cls =
+                i < proLimit
+                  ? "text-green-500"
+                  : i < contraLimit
+                    ? "text-red-500"
+                    : "text-zinc-700";
+              return (
                 <circle
                   key={i}
                   cx={p.x}
                   cy={p.y}
                   r={seatR}
                   fill="currentColor"
-                  className="text-zinc-700"
+                  className={cls}
                 />
-              ))
-            : seatsOrdered.map((p, i) => {
-                const proLimit = votesProSel;
-                const contraLimit = votesProSel + votesContraSel;
-                const cls =
-                  i < proLimit
-                    ? "text-green-500"
-                    : i < contraLimit
-                    ? "text-red-500"
-                    : "text-zinc-700";
-                return (
-                  <circle
-                    key={i}
-                    cx={p.x}
-                    cy={p.y}
-                    r={seatR}
-                    fill="currentColor"
-                    className={cls}
-                  />
-                );
-              })}
+              );
+            })}
 
           {/* Centro con 4 sedute rappresentanti (solo in vista default) */}
           {showDefault && (
@@ -735,8 +735,7 @@ function RepresentativePanelInner({
     } catch (e: any) {
       console.error(e);
       setFundsStatus(
-        `❌ Errore: ${
-          e?.shortMessage ?? e?.message ?? "proposta trasferimento"
+        `❌ Errore: ${e?.shortMessage ?? e?.message ?? "proposta trasferimento"
         }`
       );
     }
