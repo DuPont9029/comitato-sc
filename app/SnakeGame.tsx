@@ -125,16 +125,19 @@ const SnakeGame: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      changeDirection(e);
-    };
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (gameStarted && !gameOver && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault(); // Prevent page scrolling
+    }
+    changeDirection(e);
+  }, [gameStarted, gameOver, changeDirection]);
 
+  useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [changeDirection]);
+  }, [handleKeyDown]);
 
   useEffect(() => {
     if (gameStarted && !gameOver) {
