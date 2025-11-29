@@ -1,10 +1,10 @@
-# Sistema Votazioni del Comitato Studentesco
+# Configurable Open-source Voting & Decentralized Election Venue - C.O.V.D.E.V / Sistema Votazioni del Comitato Studentesco
 
 <p align="center">
   <img src="public/favicon.svg" alt="Icona del progetto" width="96" height="96" />
 </p>
 
-Un’app Next.js + Solidity per gestire e visualizzare le votazioni del Comitato Studentesco, con interfaccia moderna (dark/light), emiciclo in stile parlamento e integrazione con wallet (MetaMask).
+C.O.V.D.E.V è un’app Next.js + Solidity per gestire e visualizzare le votazioni del Comitato Studentesco, con interfaccia moderna (dark/light), emiciclo in stile parlamento e integrazione con wallet (MetaMask).
 
 <p align="center">
   <a href="https://github.com/DuPont9029/comitato-sc"><img alt="Stars" src="https://img.shields.io/github/stars/DuPont9029/comitato-sc?style=social"></a>
@@ -17,9 +17,9 @@ Un’app Next.js + Solidity per gestire e visualizzare le votazioni del Comitato
   <img alt="Top Language" src="https://img.shields.io/github/languages/top/DuPont9029/comitato-sc">
 </p>
 
-<p align="center">
-  <a href="https://starchart.cc/DuPont9029/comitato-sc"><img alt="Star History" src="https://starchart.cc/DuPont9029/comitato-sc.svg" /></a>
-</p>
+
+ [![Stargazers over time](https://starchart.cc/DuPont9029/C.O.V.D.E.V.svg?variant=adaptive)](https://starchart.cc/DuPont9029/C.O.V.D.E.V)
+
 
 ## 🚀 Caratteristiche
 - Emiciclo dinamico: riempimento dei seggi in base ai voti, simmetrico dal centro verso l’esterno.

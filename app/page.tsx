@@ -305,7 +305,7 @@ function FundTransferPanel({
         Seleziona una proposta di trasferimento fondi attiva e approvala.
       </p>
       {fundTransferProposals.length > 0 ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-3 overflow-y-auto max-h-60">
           <select
             value={selectedProposalId}
             onChange={(e) => setSelectedProposalId(e.target.value)}
@@ -370,11 +370,11 @@ function ActiveProposals({ contract }: { contract: Contract | null }) {
             Nessuna proposta caricata.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
+          <div className="mt-3 space-y-2 overflow-y-auto max-h-60">
             {ids.map((id) => (
               <ProposalRow key={id} id={id} contract={contract} />
             ))}
-          </ul>
+          </div>
         )}
         <button
           onClick={load}
