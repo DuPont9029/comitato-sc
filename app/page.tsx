@@ -332,7 +332,9 @@ function FundTransferPanel({
           </button>
         </div>
       ) : (
-         <SnakeGame /> 
+        <div className="mt-8">
+          <SnakeGame />
+        </div>
       )}
       {status && <p className="mt-3 text-xs text-red-600">{status}</p>}
     </div>

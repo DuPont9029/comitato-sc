@@ -178,7 +178,7 @@ const SnakeGame: React.FC = () => {
     <div className="flex flex-col items-center justify-center">
       <div
         ref={gameAreaRef}
-        className="relative"
+        className="relative bg-zinc-950 rounded-lg shadow-lg border border-zinc-700"
         style={{
           width: GRID_SIZE * currentCellSize,
           height: GRID_SIZE * currentCellSize,
@@ -197,7 +197,7 @@ const SnakeGame: React.FC = () => {
           ></div>
         ))}
         <div
-          className="absolute bg-yellow-500 rounded-full"
+          className="absolute bg-yellow-500"
           style={{
             left: food.x * currentCellSize,
             top: food.y * currentCellSize,
